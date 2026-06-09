@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flowix Paylink</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="shell">
+    <section id="homeView" class="center-view hidden">
+      <div class="card compact-card">
+        <p class="eyebrow">Flowix Paylink</p>
+        <h1>Invoice pembayaran simple & aman.</h1>
+        <p class="muted">Customer hanya bisa membuka invoice. Generate payment link dikunci khusus admin.</p>
+        <a class="primary-link" href="/admin">Masuk Admin</a>
+      </div>
+    </section>
+
+    <section id="adminView" class="admin-layout hidden">
+      <aside class="side-card">
+        <div>
+          <p class="eyebrow">Admin Area</p>
+          <h1>Generate Paylink</h1>
+          <p class="muted">Isi nama produk opsional dan nominal bebas sesuai minimal server. Sistem membuat invoice Flowix + link checkout random untuk customer.</p>
+        </div>
+        <div class="admin-actions">
+          <button id="enablePushButton" class="ghost-button hidden" type="button">Aktifkan Notifikasi Paid</button>
+          <button id="logoutButton" class="ghost-button hidden" type="button">Logout</button>
+        </div>
+      </aside>
+
+      <section id="loginPanel" class="card form-card hidden">
+        <p class="eyebrow">Secure Login</p>
+        <h2>Login admin</h2>
+        <form id="loginForm" class="stack">
+          <label>Username
+            <input name="username" type="text" autocomplete="username" required />
+          </label>
+          <label>Password
+            <input name="password" type="password" autocomplete="current-password" required />
+          </label>
+          <button id="loginButton" type="submit">Masuk Admin</button>
+        </form>
+      </section>
+
+      <section id="adminPanel" class="admin-grid hidden">
+        <form id="paymentForm" class="card form-card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Create Invoice</p>
+              <h2>Buat payment link</h2>
+            </div>
+            <span class="tag">Admin Only</span>
+          </div>
+
+          <label>Nama Produk
+            <input name="product_name" type="text" placeholder="Opsional — otomatis: Invoice Layanan Digital" maxlength="120" />
+          </label>
+
+          <label>Harga
+            <input id="amountInput" name="amount" type="number" placeholder="150000" min="100" step="1" inputmode="numeric" required />
+            <span id="amountHelp" class="field-hint">Minimal nominal mengikuti konfigurasi server.</span>
+          </label>
+
+          <div class="form-row">
+            <label>Expired Time
+              <select id="expiredSelect" name="expired_minutes">
+                <option value="5">5 menit</option>
+                <option value="10">10 menit</option>
+                <option value="15" selected>15 menit</option>
+                <option value="30">30 menit</option>
+                <option value="45">45 menit</option>
+                <option value="60">60 menit</option>
+              </select>
+              <span class="field-hint">Minimal 5 menit, maksimal 60 menit.</span>
+            </label>
+
+            <label>Fee Dibayar Customer
+              <select id="feeByCustomerSelect" name="fee_by_customer">
+                <option value="true" selected>Ya, tambahkan fee ke total bayar</option>
+                <option value="false">Tidak, fee dipotong dari nominal diterima</option>
+              </select>
+              <span class="field-hint">Default backend: aktif.</span>
+            </label>
+          </div>
+
+          <label>Metode Pembayaran
+            <select id="methodSelect" name="method_code">
+              <option value="">Memuat metode Flowix...</option>
+            </select>
+          </label>
+
+          <div class="delivery-card">
+            <div class="delivery-head">
+              <div>
+                <span class="field-title">Konten Setelah PAID</span>
+                <small>Opsional. Akan tampil otomatis di invoice customer setelah pembayaran success.</small>
+              </div>
+              <select id="deliveryType" name="delivery_type">
+                <option value="none" selected>Tidak ada</option>
+                <option value="text">Kirim Text</option>
+                <option value="file">Kirim File</option>
+              </select>
+            </div>
+
+            <div id="deliveryTextBox" class="hidden">
+              <label>Text untuk customer
+                <textarea id="deliveryText" name="delivery_text" rows="5" maxlength="12000" placeholder="Contoh: Terima kasih. Berikut detail akun / instruksi / kode akses customer..."></textarea>
+              </label>
+            </div>
+
+            <div id="deliveryFileBox" class="hidden">
+              <label>File untuk customer
+                <input id="deliveryFile" name="delivery_file" type="file" />
+                <span class="field-hint">Maksimal 2MB. File hanya bisa diunduh setelah invoice PAID.</span>
+              </label>
+            </div>
+          </div>
+
+          <button id="submitButton" type="submit">Generate Payment Link</button>
+          <p class="safe-note">Status PAID hanya dari webhook valid atau sinkronisasi status deposit Flowix. Pending invoice disinkronkan server tiap 8 detik, dan expired dicek tiap 15 detik.</p>
+        </form>
+
+        <aside class="card result-card">
+          <p class="eyebrow">Generated Link</p>
+          <h2 id="resultTitle">Belum ada invoice</h2>
+          <p id="resultText" class="muted">Link checkout akan muncul setelah invoice berhasil dibuat.</p>
+
+          <div id="resultBox" class="result-box hidden">
+            <input id="paymentLink" readonly />
+            <div class="button-row">
+              <button id="copyButton" type="button">Copy</button>
+              <a id="openLink" class="ghost-link" target="_blank" rel="noopener">Buka</a>
+            </div>
+          </div>
+
+          <div class="history-head">
+            <h3>Invoice terbaru</h3>
+            <button id="refreshListButton" class="small-button" type="button">Refresh</button>
+          </div>
+          <div id="invoiceList" class="invoice-list"></div>
+        </aside>
+      </section>
+    </section>
+
+    <section id="checkoutView" class="checkout hidden">
+      <div class="invoice-card">
+        <div class="invoice-top">
+          <div>
+            <p class="eyebrow">Flowix Invoice</p>
+            <h1 id="invoiceProduct">Loading invoice...</h1>
+          </div>
+          <span id="invoiceStatus" class="status pending">PENDING</span>
+        </div>
+
+        <div id="invoiceStatusPanel" class="status-panel status-pending-panel">
+          <span id="invoiceStatusIcon">⌛</span>
+          <div>
+            <strong id="invoiceStatusTitle">Menunggu pembayaran</strong>
+            <p id="invoiceStatusDescription">Selesaikan pembayaran sebelum invoice expired.</p>
+          </div>
+        </div>
+
+        <div class="amount-box">
+          <span>Total Pembayaran</span>
+          <strong id="invoiceAmount">Rp0</strong>
+        </div>
+
+        <div id="paymentBox" class="payment-box">
+          <div class="loading-payment">Memuat instruksi pembayaran...</div>
+        </div>
+
+        <div class="invoice-meta">
+          <p><span>Invoice</span><strong id="invoiceReff">-</strong></p>
+          <p><span>Metode</span><strong id="invoiceMethod">-</strong></p>
+          <p><span>Expired</span><strong id="invoiceExpired">-</strong></p>
+        </div>
+
+        <div id="paidDelivery" class="paid-delivery hidden"></div>
+        <p id="paidNote" class="paid-note hidden">Pembayaran sudah diterima. Terima kasih ✨</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
