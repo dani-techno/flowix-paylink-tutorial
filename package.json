@@ -1,0 +1,15 @@
+{
+  "name": "flowix-payment-link",
+  "version": "1.0.0",
+  "description": "Payment Link Generator demo using Flowix deposit API",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.19.2",
+    "web-push": "^3.6.7"
+  }
+}
